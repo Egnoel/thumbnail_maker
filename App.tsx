@@ -203,9 +203,11 @@ const App: React.FC = () => {
 
   const downloadImage = () => {
     if (!state.currentImage) return;
+    const dummyUsername = "CreativeDev";
+    const incrementNumber = state.historyIndex + 1;
     const link = document.createElement('a');
     link.href = state.currentImage;
-    link.download = `yt-thumbnail-${Date.now()}.png`;
+    link.download = `${dummyUsername}-thumbnail-${incrementNumber}.png`;
     link.click();
   };
 
