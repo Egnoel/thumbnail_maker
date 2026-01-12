@@ -9,6 +9,13 @@ export interface Message {
   timestamp: number;
 }
 
+export interface Project {
+  id: string;
+  thumbnailUrl: string;
+  timestamp: number;
+  name: string;
+}
+
 export interface AppState {
   messages: Message[];
   currentImage: string | null;

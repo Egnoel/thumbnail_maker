@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Message, AppState } from './types';
+import { Message, AppState, Project } from './types';
 import { processThumbnailRequest } from './services/geminiService';
 import { 
   Send, 
@@ -16,8 +16,15 @@ import {
   Zap,
   Layers,
   Maximize2,
-  RefreshCw
+  RefreshCw,
+  FolderOpen,
+  X,
+  Clock,
+  Save
 } from 'lucide-react';
+
+const STORAGE_KEY = 'thumbnail_pro_projects';
+const DUMMY_USERNAME = "CreativeDev";
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -36,11 +43,31 @@ const App: React.FC = () => {
     error: null
   });
   
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showProjects, setShowProjects] = useState(false);
   const [input, setInput] = useState('');
   const [showFullPreview, setShowFullPreview] = useState(false);
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isReplacingRef = useRef<boolean>(false);
+
+  // Load projects from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        setProjects(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse projects", e);
+      }
+    }
+  }, []);
+
+  // Save projects to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+  }, [projects]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,7 +93,6 @@ const App: React.FC = () => {
   const replaceInHistory = (newImageUrl: string) => {
     setState(prev => {
       if (prev.historyIndex === -1) {
-        // Fallback to add if history is empty
         return {
           ...prev,
           history: [newImageUrl],
@@ -159,6 +185,43 @@ const App: React.FC = () => {
     }
   };
 
+  const saveToLibrary = () => {
+    if (!state.currentImage) return;
+    const incrementNumber = state.historyIndex + 1;
+    const newProject: Project = {
+      id: Date.now().toString(),
+      thumbnailUrl: state.currentImage,
+      timestamp: Date.now(),
+      name: `${DUMMY_USERNAME}-thumbnail-${incrementNumber}`
+    };
+    setProjects(prev => [newProject, ...prev]);
+    return newProject.name;
+  };
+
+  const loadProject = (project: Project) => {
+    setState({
+      messages: [
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          text: `Project "${project.name}" loaded successfully. Ready for more edits!`,
+          timestamp: Date.now()
+        }
+      ],
+      currentImage: project.thumbnailUrl,
+      history: [project.thumbnailUrl],
+      historyIndex: 0,
+      isLoading: false,
+      error: null
+    });
+    setShowProjects(false);
+  };
+
+  const deleteProject = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProjects(prev => prev.filter(p => p.id !== id));
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -203,11 +266,10 @@ const App: React.FC = () => {
 
   const downloadImage = () => {
     if (!state.currentImage) return;
-    const dummyUsername = "CreativeDev";
-    const incrementNumber = state.historyIndex + 1;
+    const fileName = saveToLibrary();
     const link = document.createElement('a');
     link.href = state.currentImage;
-    link.download = `${dummyUsername}-thumbnail-${incrementNumber}.png`;
+    link.download = `${fileName}.png`;
     link.click();
   };
 
@@ -229,6 +291,14 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowProjects(!showProjects)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all border border-white/5 ${showProjects ? 'bg-white text-black' : 'bg-[#1a1a1a] text-gray-300 hover:text-white'}`}
+          >
+            <FolderOpen className="w-4 h-4" />
+            Projects Library ({projects.length})
+          </button>
+
           <div className="hidden md:flex items-center bg-[#1a1a1a] rounded-lg p-1 border border-white/5">
             <button
               onClick={handleUndo}
@@ -260,7 +330,7 @@ const App: React.FC = () => {
               </button>
             )}
             <button 
-              onClick={() => { if(confirm('Reset Project?')) window.location.reload(); }}
+              onClick={() => { if(confirm('Reset current project?')) window.location.reload(); }}
               className="p-2.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
               title="New Project"
             >
@@ -270,7 +340,62 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* Projects Overlay */}
+        {showProjects && (
+          <div className="absolute inset-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-2xl flex flex-col p-8 lg:p-12 transition-all animate-in fade-in duration-300">
+            <div className="flex items-center justify-between mb-8 max-w-7xl mx-auto w-full">
+              <h2 className="text-3xl font-black tracking-tighter flex items-center gap-3">
+                <FolderOpen className="w-8 h-8 text-red-600" />
+                PROJECT LIBRARY
+              </h2>
+              <button 
+                onClick={() => setShowProjects(false)}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto max-w-7xl mx-auto w-full scrollbar-hide pb-20">
+              {projects.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                  <ImageIcon className="w-20 h-20 mb-6" />
+                  <p className="text-xl font-bold">No saved projects yet</p>
+                  <p className="text-sm mt-2">Projects are automatically saved when you export or click the save icon.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  {projects.map((project) => (
+                    <div 
+                      key={project.id}
+                      onClick={() => loadProject(project)}
+                      className="group relative aspect-video bg-[#111] rounded-2xl overflow-hidden border border-white/5 hover:border-red-600/50 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-red-600/20"
+                    >
+                      <img src={project.thumbnailUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt={project.name} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent p-6 flex flex-col justify-end">
+                        <h4 className="font-bold text-white text-lg truncate mb-1">{project.name}</h4>
+                        <div className="flex items-center gap-2 text-gray-400 text-[10px] font-black uppercase tracking-widest">
+                          <Clock className="w-3 h-3" />
+                          {new Date(project.timestamp).toLocaleDateString()} — {new Date(project.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                      <div className="absolute top-4 right-4 flex gap-2 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+                        <button 
+                          onClick={(e) => deleteProject(project.id, e)}
+                          className="p-2.5 bg-black/80 backdrop-blur-md text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-xl"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Chat / Sidebar Controls */}
         <div className="w-full max-w-md lg:max-w-lg flex flex-col bg-[#0f0f0f] border-r border-white/5">
           <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 scrollbar-hide">
@@ -398,6 +523,15 @@ const App: React.FC = () => {
               </h2>
               <div className="flex items-center gap-4">
                 <button 
+                  onClick={saveToLibrary}
+                  disabled={!state.currentImage || state.isLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-white/10 border border-white/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all disabled:opacity-30"
+                  title="Save snapshot to project library"
+                >
+                  <Save className="w-3 h-3" />
+                  Snapshot
+                </button>
+                <button 
                   onClick={triggerReplace}
                   disabled={!state.currentImage || state.isLoading}
                   className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-white/10 border border-white/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all disabled:opacity-30"
@@ -429,7 +563,7 @@ const App: React.FC = () => {
                           onClick={downloadImage}
                           className="bg-white text-black px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-transform shadow-2xl"
                         >
-                          <Download className="w-4 h-4" /> Save Export
+                          <Download className="w-4 h-4" /> Export Master
                         </button>
                         <button 
                           onClick={() => setShowFullPreview(true)}
@@ -511,7 +645,7 @@ const App: React.FC = () => {
             <div className="absolute bottom-10 left-10 right-10 flex justify-between items-end">
               <div>
                 <span className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Master Render</span>
-                <h2 className="text-2xl font-black text-white tracking-tighter">PROJECT_V{state.historyIndex + 1}_YT.PNG</h2>
+                <h2 className="text-2xl font-black text-white tracking-tighter">{DUMMY_USERNAME}-thumbnail-{state.historyIndex + 1}.png</h2>
               </div>
               <button 
                 onClick={(e) => { e.stopPropagation(); downloadImage(); }}
