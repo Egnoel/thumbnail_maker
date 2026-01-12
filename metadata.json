@@ -1,0 +1,7 @@
+{
+  "name": "Thumbnail Pro",
+  "description": "An AI-powered YouTube thumbnail editor that uses Gemini to generate and edit images in 16:9 aspect ratio through a conversational chat interface.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
