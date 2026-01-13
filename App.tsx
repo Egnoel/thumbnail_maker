@@ -20,11 +20,17 @@ import {
   FolderOpen,
   X,
   Clock,
-  Save
+  Save,
+  Settings,
+  User,
+  LogOut,
+  ChevronDown,
+  CreditCard
 } from 'lucide-react';
 
 const STORAGE_KEY = 'thumbnail_pro_projects';
 const DUMMY_USERNAME = "CreativeDev";
+const PROFILE_IMAGE_URL = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop";
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -45,11 +51,13 @@ const App: React.FC = () => {
   
   const [projects, setProjects] = useState<Project[]>([]);
   const [showProjects, setShowProjects] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [input, setInput] = useState('');
   const [showFullPreview, setShowFullPreview] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
   const isReplacingRef = useRef<boolean>(false);
 
   // Load projects from localStorage on mount
@@ -68,6 +76,17 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
   }, [projects]);
+
+  // Close settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setShowSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -336,6 +355,58 @@ const App: React.FC = () => {
             >
               <Trash2 className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Profile and Settings Dropdown */}
+          <div className="relative" ref={settingsRef}>
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2 p-1 hover:bg-white/5 rounded-full transition-all border border-white/5 focus:outline-none"
+            >
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shadow-lg">
+                <img src={PROFILE_IMAGE_URL} alt="Profile" className="w-full h-full object-cover" />
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${showSettings ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSettings && (
+              <div className="absolute right-0 mt-3 w-56 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-4 bg-gradient-to-br from-[#222] to-[#1a1a1a] border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10">
+                      <img src={PROFILE_IMAGE_URL} alt="Profile" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-black text-white truncate">{DUMMY_USERNAME}</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.5)]"></span>
+                        <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Pro Member</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-2">
+                  <button className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all group">
+                    <User className="w-4 h-4 text-gray-500 group-hover:text-red-500 transition-colors" />
+                    Account Details
+                  </button>
+                  <button className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all group">
+                    <CreditCard className="w-4 h-4 text-gray-500 group-hover:text-red-500 transition-colors" />
+                    Billing & Plan
+                  </button>
+                  <button className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all group">
+                    <Settings className="w-4 h-4 text-gray-500 group-hover:text-red-500 transition-colors" />
+                    Studio Settings
+                  </button>
+                </div>
+                <div className="p-2 border-t border-white/5">
+                  <button className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all group">
+                    <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
