@@ -39,7 +39,9 @@ import {
   Target,
   SquareDashedMousePointer,
   Sparkle,
-  Plus
+  Plus,
+  MessageSquareMore,
+  CheckCircle2
 } from 'lucide-react';
 
 const STORAGE_KEY = 'thumbnail_pro_projects';
@@ -168,6 +170,13 @@ const EditorView: React.FC = () => {
   const [input, setInput] = useState('');
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
+
+  // Feedback State
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackRole, setFeedbackRole] = useState('');
+  const [feedbackType, setFeedbackType] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   // Region Selection State
   const [isRegionMode, setIsRegionMode] = useState(false);
@@ -450,6 +459,18 @@ const EditorView: React.FC = () => {
     }
   };
 
+  const submitFeedback = () => {
+    console.log('Feedback submitted:', { feedbackRole, feedbackType, feedbackText });
+    setFeedbackSubmitted(true);
+    setTimeout(() => {
+      setShowFeedback(false);
+      setFeedbackSubmitted(false);
+      setFeedbackRole('');
+      setFeedbackType('');
+      setFeedbackText('');
+    }, 2000);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden font-sans">
       <header className="flex items-center justify-between px-6 py-3 bg-[#111] border-b border-white/5 z-20">
@@ -490,32 +511,41 @@ const EditorView: React.FC = () => {
             <button onClick={handleRedo} disabled={state.historyIndex >= state.history.length - 1} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all disabled:opacity-10"><Redo2 className="w-4 h-4" /></button>
           </div>
           
-          <div className="flex gap-2 relative" ref={exportRef}>
-            {state.currentImage && (
-              <div className="flex items-stretch">
-                <button onClick={performAdvancedExport} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-l-lg font-bold text-sm transition-all shadow-lg shadow-red-600/20 border-r border-white/10"><Download className="w-4 h-4" /> Export</button>
-                <button onClick={() => setShowExportMenu(!showExportMenu)} className={`px-2 py-2 bg-red-600 hover:bg-red-500 text-white rounded-r-lg transition-all ${showExportMenu ? 'bg-red-700' : ''}`}><ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showExportMenu ? 'rotate-180' : ''}`} /></button>
-              </div>
-            )}
-            {showExportMenu && (
-              <div className="absolute top-full right-0 mt-3 w-64 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-4 border-b border-white/5">
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Resolution</p>
-                  <div className="space-y-1">
-                    {['standard', 'hd', 'ultra'].map((q) => (
-                      <button key={q} onClick={() => setExportConfig({ ...exportConfig, quality: q as ExportQuality })} className={`w-full flex items-center justify-between p-2 rounded-xl transition-all ${exportConfig.quality === q ? 'bg-red-600/10 border border-red-600/20' : 'hover:bg-white/5'}`}>
-                        <div className="text-left"><p className={`text-xs font-bold ${exportConfig.quality === q ? 'text-white' : 'text-gray-400'}`}>{q === 'ultra' ? 'Ultra 4K' : q.toUpperCase()}</p></div>
-                        {exportConfig.quality === q && <Check className="w-3 h-3 text-red-500" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3"><button onClick={performAdvancedExport} className="w-full py-2.5 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all">Download</button></div>
-              </div>
-            )}
-            <button onClick={() => { if(confirm('Clear workspace?')) setState(prev => ({ ...prev, messages: [], currentImage: null, history: [], historyIndex: -1 })); }} className="p-2.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Reset All Workspace">
-              <Trash2 className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowFeedback(true)} 
+              className="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+              title="Share Feedback"
+            >
+              <MessageSquareMore className="w-5 h-5" />
             </button>
+            <div className="flex gap-2 relative" ref={exportRef}>
+              {state.currentImage && (
+                <div className="flex items-stretch">
+                  <button onClick={performAdvancedExport} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-l-lg font-bold text-sm transition-all shadow-lg shadow-red-600/20 border-r border-white/10"><Download className="w-4 h-4" /> Export</button>
+                  <button onClick={() => setShowExportMenu(!showExportMenu)} className={`px-2 py-2 bg-red-600 hover:bg-red-500 text-white rounded-r-lg transition-all ${showExportMenu ? 'bg-red-700' : ''}`}><ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showExportMenu ? 'rotate-180' : ''}`} /></button>
+                </div>
+              )}
+              {showExportMenu && (
+                <div className="absolute top-full right-0 mt-3 w-64 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-4 border-b border-white/5">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Resolution</p>
+                    <div className="space-y-1">
+                      {['standard', 'hd', 'ultra'].map((q) => (
+                        <button key={q} onClick={() => setExportConfig({ ...exportConfig, quality: q as ExportQuality })} className={`w-full flex items-center justify-between p-2 rounded-xl transition-all ${exportConfig.quality === q ? 'bg-red-600/10 border border-red-600/20' : 'hover:bg-white/5'}`}>
+                          <div className="text-left"><p className={`text-xs font-bold ${exportConfig.quality === q ? 'text-white' : 'text-gray-400'}`}>{q === 'ultra' ? 'Ultra 4K' : q.toUpperCase()}</p></div>
+                          {exportConfig.quality === q && <Check className="w-3 h-3 text-red-500" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3"><button onClick={performAdvancedExport} className="w-full py-2.5 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all">Download</button></div>
+                </div>
+              )}
+              <button onClick={() => { if(confirm('Clear workspace?')) setState(prev => ({ ...prev, messages: [], currentImage: null, history: [], historyIndex: -1 })); }} className="p-2.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Reset All Workspace">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -754,6 +784,89 @@ const EditorView: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Share Feedback Modal */}
+      {showFeedback && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-3xl shadow-[0_32px_120px_rgba(0,0,0,0.8)] overflow-hidden">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-600/10 rounded-xl">
+                  <MessageSquareMore className="w-5 h-5 text-red-500" />
+                </div>
+                <h2 className="text-xl font-black tracking-tight">SHARE FEEDBACK</h2>
+              </div>
+              <button onClick={() => setShowFeedback(false)} className="p-2 hover:bg-white/5 rounded-full transition-all"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              {feedbackSubmitted ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
+                  <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center border-2 border-green-500 mb-6">
+                    <CheckCircle2 className="w-10 h-10 text-green-500" />
+                  </div>
+                  <h3 className="text-2xl font-black mb-2">THANK YOU!</h3>
+                  <p className="text-gray-400 font-medium">Your feedback helps us build the future of content creation.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Who are you? */}
+                  <div className="space-y-4">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Who are you?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['Youtuber', 'Designer', 'Editor', 'Developer', 'Hobbyist'].map((role) => (
+                        <button 
+                          key={role} 
+                          onClick={() => setFeedbackRole(role)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${feedbackRole === role ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'}`}
+                        >
+                          {role}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* What's this about? */}
+                  <div className="space-y-4">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">What's this about?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['Feature Request', 'Bug Report', 'General Information'].map((type) => (
+                        <button 
+                          key={type} 
+                          onClick={() => setFeedbackType(type)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${feedbackType === type ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'}`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Your Feedback */}
+                  <div className="space-y-4">
+                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Your Feedback</p>
+                    <textarea 
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      placeholder="Tell us what's on your mind..."
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-600/50 resize-none h-32 placeholder:text-gray-600"
+                    />
+                  </div>
+
+                  <button 
+                    onClick={submitFeedback}
+                    disabled={!feedbackRole || !feedbackType || !feedbackText.trim()}
+                    className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-red-600/20 disabled:opacity-30 flex items-center justify-center gap-3 group"
+                  >
+                    Submit Feedback
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showFullPreview && state.currentImage && (
         <div className="fixed inset-0 z-50 bg-black/98 flex items-center justify-center p-4 lg:p-20 backdrop-blur-3xl transition-all animate-in fade-in zoom-in duration-300" onClick={() => setShowFullPreview(false)}>
