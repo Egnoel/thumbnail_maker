@@ -38,7 +38,8 @@ import {
   Eraser,
   Target,
   SquareDashedMousePointer,
-  Sparkle
+  Sparkle,
+  Plus
 } from 'lucide-react';
 
 const STORAGE_KEY = 'thumbnail_pro_projects';
@@ -423,6 +424,32 @@ const EditorView: React.FC = () => {
     setShowExportMenu(false);
   };
 
+  const handleNewProject = () => {
+    if (confirm('Start a new project? This will clear your current workspace.')) {
+      setState({
+        messages: [
+          {
+            id: Date.now().toString(),
+            role: 'assistant',
+            text: "Workspace cleared. Let's create something viral! Upload a base image or describe your vision.",
+            timestamp: Date.now()
+          }
+        ],
+        currentImage: null,
+        history: [],
+        historyIndex: -1,
+        isLoading: false,
+        suggestions: [],
+        isSuggesting: false,
+        error: null
+      });
+      setInput('');
+      setSelection(null);
+      setIsRegionMode(false);
+      refreshSuggestions();
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden font-sans">
       <header className="flex items-center justify-between px-6 py-3 bg-[#111] border-b border-white/5 z-20">
@@ -430,24 +457,43 @@ const EditorView: React.FC = () => {
           <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20">
             <Zap className="w-6 h-6 text-white fill-current" />
           </div>
-          <div>
+          <div className="hidden sm:block">
             <h1 className="text-lg font-extrabold tracking-tight">THUMBNAIL <span className="text-red-600">PRO</span></h1>
             <div className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span><p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest">Studio Active</p></div>
           </div>
         </div>
+        
         <div className="flex items-center gap-4">
-          <button onClick={() => setShowProjects(!showProjects)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all border border-white/5 ${showProjects ? 'bg-white text-black' : 'bg-[#1a1a1a] text-gray-300 hover:text-white'}`}>
-            <FolderOpen className="w-4 h-4" /> Library ({projects.length})
-          </button>
-          <div className="hidden md:flex items-center bg-[#1a1a1a] rounded-lg p-1 border border-white/5">
-            <button onClick={handleUndo} disabled={state.historyIndex <= 0} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-md transition-all disabled:opacity-10"><Undo2 className="w-4 h-4" /></button>
+          <div className="flex items-center bg-[#1a1a1a] p-1 rounded-xl border border-white/5 shadow-inner">
+            <button 
+              onClick={handleNewProject}
+              className="flex items-center gap-2 px-4 py-2 hover:bg-white/5 text-gray-300 hover:text-white rounded-lg font-bold text-sm transition-all group"
+              title="Start New Project"
+            >
+              <Plus className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
+              <span className="hidden md:inline">New Project</span>
+            </button>
             <div className="w-px h-4 bg-white/5 mx-1" />
-            <button onClick={handleRedo} disabled={state.historyIndex >= state.history.length - 1} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-md transition-all disabled:opacity-10"><Redo2 className="w-4 h-4" /></button>
+            <button 
+              onClick={() => setShowProjects(!showProjects)} 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${showProjects ? 'bg-white text-black shadow-lg' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+              title="Open Project Library"
+            >
+              <FolderOpen className="w-4 h-4" />
+              <span className="hidden md:inline">Library ({projects.length})</span>
+            </button>
           </div>
+          
+          <div className="hidden md:flex items-center bg-[#1a1a1a] rounded-xl p-1 border border-white/5 shadow-inner">
+            <button onClick={handleUndo} disabled={state.historyIndex <= 0} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all disabled:opacity-10"><Undo2 className="w-4 h-4" /></button>
+            <div className="w-px h-4 bg-white/5 mx-1" />
+            <button onClick={handleRedo} disabled={state.historyIndex >= state.history.length - 1} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all disabled:opacity-10"><Redo2 className="w-4 h-4" /></button>
+          </div>
+          
           <div className="flex gap-2 relative" ref={exportRef}>
             {state.currentImage && (
               <div className="flex items-stretch">
-                <button onClick={performAdvancedExport} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-l-lg font-bold text-sm transition-all shadow-lg shadow-red-600/10 border-r border-white/10"><Download className="w-4 h-4" /> Export</button>
+                <button onClick={performAdvancedExport} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-l-lg font-bold text-sm transition-all shadow-lg shadow-red-600/20 border-r border-white/10"><Download className="w-4 h-4" /> Export</button>
                 <button onClick={() => setShowExportMenu(!showExportMenu)} className={`px-2 py-2 bg-red-600 hover:bg-red-500 text-white rounded-r-lg transition-all ${showExportMenu ? 'bg-red-700' : ''}`}><ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showExportMenu ? 'rotate-180' : ''}`} /></button>
               </div>
             )}
@@ -467,7 +513,9 @@ const EditorView: React.FC = () => {
                 <div className="p-3"><button onClick={performAdvancedExport} className="w-full py-2.5 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all">Download</button></div>
               </div>
             )}
-            <button onClick={() => { if(confirm('Reset?')) window.location.reload(); }} className="p-2.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"><Trash2 className="w-5 h-5" /></button>
+            <button onClick={() => { if(confirm('Clear workspace?')) setState(prev => ({ ...prev, messages: [], currentImage: null, history: [], historyIndex: -1 })); }} className="p-2.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="Reset All Workspace">
+              <Trash2 className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -558,7 +606,6 @@ const EditorView: React.FC = () => {
                 <div className="w-full h-full relative select-none">
                   <img src={state.currentImage} alt="canvas" className={`w-full h-full object-cover transition-all duration-500 pointer-events-none ${state.isLoading ? 'scale-105 blur-sm opacity-50' : 'scale-100 opacity-100'}`} />
                   
-                  {/* Floating Tool Dock - Always accessible on current image */}
                   {!state.isLoading && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-30 transition-all opacity-0 group-hover:opacity-100 duration-300">
                       <ToolButton 
@@ -594,7 +641,6 @@ const EditorView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Selection Overlay */}
                   {selection && (
                     <div 
                       className="absolute border-2 border-red-600 bg-red-600/10 pointer-events-none z-20 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
@@ -609,7 +655,6 @@ const EditorView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Region Prompt UI */}
                   {!isRegionMode && selection && !selection.active && (
                     <div 
                       className="absolute z-40 p-5 bg-[#111]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in duration-300 w-80"
