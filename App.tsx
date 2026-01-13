@@ -25,20 +25,109 @@ import {
   User,
   LogOut,
   ChevronDown,
-  CreditCard
+  CreditCard,
+  ArrowRight,
+  MousePointer2,
+  Monitor,
+  Flame
 } from 'lucide-react';
 
 const STORAGE_KEY = 'thumbnail_pro_projects';
 const DUMMY_USERNAME = "CreativeDev";
 const PROFILE_IMAGE_URL = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop";
 
-const App: React.FC = () => {
+const LandingPage: React.FC<{ onStart: () => void }> = ({ onStart }) => {
+  return (
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Background Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-900/10 rounded-full blur-[120px] pointer-events-none" />
+      
+      {/* Grid Pattern */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+      <header className="absolute top-0 w-full px-8 py-6 flex justify-between items-center z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/20">
+            <Zap className="w-6 h-6 text-white fill-current" />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight">THUMBNAIL <span className="text-red-600">PRO</span></h1>
+        </div>
+        <div className="hidden md:flex gap-8 text-xs font-black uppercase tracking-widest text-gray-400">
+          <a href="#" className="hover:text-white transition-colors">Features</a>
+          <a href="#" className="hover:text-white transition-colors">Showcase</a>
+          <a href="#" className="hover:text-white transition-colors">Pricing</a>
+        </div>
+        <button 
+          onClick={onStart}
+          className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs font-black uppercase tracking-widest transition-all"
+        >
+          Sign In
+        </button>
+      </header>
+
+      <main className="relative z-10 container mx-auto px-6 text-center pt-20">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/10 border border-red-600/20 rounded-full mb-8 animate-bounce">
+          <Sparkles className="w-4 h-4 text-red-500" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">New: 2.5 Flash Rendering Engine</span>
+        </div>
+
+        <h2 className="text-6xl md:text-8xl font-black tracking-tighter mb-6 leading-[0.9]">
+          VIRAL <span className="text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800">THUMBNAILS</span><br />
+          IN SECONDS.
+        </h2>
+
+        <p className="max-w-2xl mx-auto text-gray-400 text-lg md:text-xl font-medium mb-12 leading-relaxed">
+          Stop losing clicks. Transform your images into high-contrast, cinematic masterpieces designed to dominate the YouTube homepage using advanced Gemini AI.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-24">
+          <button 
+            onClick={onStart}
+            className="group relative px-10 py-5 bg-red-600 hover:bg-red-500 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_20px_50px_rgba(220,38,38,0.3)] hover:-translate-y-1"
+          >
+            <div className="flex items-center gap-3">
+              Start Creating Now
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </button>
+          <button className="px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl font-black text-sm uppercase tracking-widest transition-all flex items-center gap-3">
+            <Monitor className="w-5 h-5" />
+            View Demo
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {[
+            { icon: <Flame className="w-6 h-6" />, title: "Viral Glow", desc: "One-click cinematic lighting and neon rim effects." },
+            { icon: <MousePointer2 className="w-6 h-6" />, title: "Smart Replace", desc: "Swap backgrounds instantly with professional studio presets." },
+            { icon: <ImageIcon className="w-6 h-6" />, title: "16:9 Native", desc: "Perfectly optimized for YouTube's standard dimensions." }
+          ].map((feature, i) => (
+            <div key={i} className="p-8 bg-white/5 border border-white/5 rounded-3xl text-left hover:bg-white/[0.07] transition-all group">
+              <div className="w-12 h-12 bg-red-600/10 rounded-xl flex items-center justify-center mb-6 text-red-500 group-hover:scale-110 transition-transform">
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">{feature.desc}</p>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      <footer className="mt-24 pb-12 text-center text-gray-600 text-[10px] font-black uppercase tracking-widest">
+        © 2024 Thumbnail Pro AI — Built for the Next Generation of Creators
+      </footer>
+    </div>
+  );
+};
+
+const EditorView: React.FC = () => {
   const [state, setState] = useState<AppState>({
     messages: [
       {
         id: '1',
         role: 'assistant',
-        text: "Welcome to Thumbnail Pro. Upload a photo or describe a scene, and I'll craft a high-conversion 16:9 YouTube thumbnail. What's the video about?",
+        text: "Welcome to the Studio. Upload a photo or describe a scene, and I'll craft a high-conversion 16:9 YouTube thumbnail. What's the video about?",
         timestamp: Date.now()
       }
     ],
@@ -293,7 +382,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#0a0a0a] text-gray-100 overflow-hidden animate-in fade-in duration-700">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 bg-[#111] border-b border-white/5 z-20">
         <div className="flex items-center gap-3">
@@ -746,6 +835,20 @@ const App: React.FC = () => {
         }
       `}} />
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  const [view, setView] = useState<'landing' | 'editor'>('landing');
+
+  return (
+    <>
+      {view === 'landing' ? (
+        <LandingPage onStart={() => setView('editor')} />
+      ) : (
+        <EditorView />
+      )}
+    </>
   );
 };
 
