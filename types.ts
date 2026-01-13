@@ -22,5 +22,7 @@ export interface AppState {
   history: string[];
   historyIndex: number;
   isLoading: boolean;
+  suggestions: string[];
+  isSuggesting: boolean;
   error: string | null;
 }
