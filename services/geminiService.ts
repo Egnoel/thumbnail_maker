@@ -1,5 +1,7 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+// NOTE: `@google/genai` is a server-side SDK and can break client bundles
+// when imported at module scope. We dynamically import it inside the
+// functions below and fall back to a local mock implementation when it's
+// not available (e.g., running in the browser during development).
 
 const IMAGE_MODEL_NAME = 'gemini-2.5-flash-image';
 const TEXT_MODEL_NAME = 'gemini-3-flash-preview';
@@ -24,61 +26,87 @@ When editing an existing image:
 
 export async function processThumbnailRequest(
   prompt: string,
-  base64Image?: string | null
+  base64Image?: string | null,
 ): Promise<{ imageUrl: string; text: string }> {
-  // Fix: Initializing GoogleGenAI with exactly the required named parameter and environment variable
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  // Refined prompt construction
-  const finalPrompt = base64Image 
-    ? `TASK: Edit the provided 16:9 image based on this request: "${prompt}". Maintain the subject's identity but transform the style to be a viral YouTube thumbnail. ${SYSTEM_INSTRUCTION}`
-    : `TASK: Generate a brand new 16:9 YouTube thumbnail from scratch: "${prompt}". ${SYSTEM_INSTRUCTION}`;
-
   try {
-    const parts: any[] = [{ text: finalPrompt }];
-    
+    // 1) If client-side, prefer proxy backend
+    if (typeof window !== 'undefined') {
+      try {
+        const resp = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, base64Image }),
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.imageUrl)
+            return {
+              imageUrl: json.imageUrl,
+              text: json.text || 'Generated via proxy',
+            };
+        }
+      } catch (e) {
+        console.warn('Proxy generate failed, falling back to server SDK:', e);
+      }
+    }
+
+    // 2) Try server-side GoogleGenAI SDK via dynamic import
+    let ai: any = null;
+    try {
+      const mod = await import('@google/genai');
+      ai = new mod.GoogleGenAI({ apiKey: process.env?.API_KEY });
+    } catch (e) {
+      console.warn('Google GenAI SDK not available, using mock behavior', e);
+      ai = null;
+    }
+
+    const parts: any[] = [{ text: `${prompt} ${SYSTEM_INSTRUCTION}` }];
     if (base64Image) {
       const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
       parts.unshift({
-        inlineData: {
-          data: cleanBase64,
-          mimeType: 'image/png'
-        }
+        inlineData: { data: cleanBase64, mimeType: 'image/png' },
       });
     }
 
-    const response = await ai.models.generateContent({
-      model: IMAGE_MODEL_NAME,
-      contents: { parts },
-      config: {
-        imageConfig: {
-          aspectRatio: "16:9"
+    if (ai) {
+      const response = await ai.models.generateContent({
+        model: IMAGE_MODEL_NAME,
+        contents: { parts },
+        config: { imageConfig: { aspectRatio: '16:9' } },
+      });
+      let generatedImageUrl = '';
+      let responseText = 'Thumbnail updated!';
+      if (response.candidates && response.candidates[0].content.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData)
+            generatedImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          else if (part.text) responseText = part.text;
         }
       }
-    });
-
-    let generatedImageUrl = '';
-    let responseText = 'Thumbnail updated!';
-
-    if (response.candidates && response.candidates[0].content.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          generatedImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-        } else if (part.text) {
-          responseText = part.text;
-        }
-      }
+      if (!generatedImageUrl)
+        throw new Error(
+          'The AI did not return a new image. Try a different prompt.',
+        );
+      return { imageUrl: generatedImageUrl, text: responseText };
     }
 
-    if (!generatedImageUrl) {
-      throw new Error('The AI did not return a new image. Try a different prompt.');
-    }
-
-    return { imageUrl: generatedImageUrl, text: responseText };
+    // 3) Fallback: return input image or placeholder so UI still displays
+    if (base64Image)
+      return {
+        imageUrl: base64Image,
+        text: 'Preview (local mock): no remote AI available.',
+      };
+    const placeholder =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAn0B9p3q2JQAAAAASUVORK5CYII=';
+    return {
+      imageUrl: placeholder,
+      text: 'Preview (local mock): generate disabled.',
+    };
   } catch (error: any) {
     console.error('Gemini API Error:', error);
-    if (error.message?.includes('429')) throw new Error('Too many requests. Please wait a moment.');
-    throw new Error(error.message || 'Failed to process thumbnail request.');
+    if (error?.message?.includes('429'))
+      throw new Error('Too many requests. Please wait a moment.');
+    throw new Error(error?.message || 'Failed to process thumbnail request.');
   }
 }
 
@@ -87,10 +115,21 @@ export async function processThumbnailRequest(
  */
 export async function getThumbnailSuggestions(
   lastMessage?: string,
-  base64Image?: string | null
+  base64Image?: string | null,
 ): Promise<string[]> {
-  // Fix: Initializing GoogleGenAI with exactly the required named parameter and environment variable
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Try to dynamically import the SDK. Fall back to canned suggestions if not available.
+  let ai: any = null;
+  let Type: any = null;
+  try {
+    const mod = await import('@google/genai');
+    ai = new mod.GoogleGenAI({ apiKey: process.env?.API_KEY });
+    Type = mod.Type;
+  } catch (e) {
+    console.warn(
+      'Google GenAI SDK not available for suggestions, using fallback.',
+      e,
+    );
+  }
 
   let prompt = '';
   const parts: any[] = [];
@@ -100,38 +139,43 @@ export async function getThumbnailSuggestions(
     parts.push({
       inlineData: {
         data: cleanBase64,
-        mimeType: 'image/png'
-      }
+        mimeType: 'image/png',
+      },
     });
-    prompt = `Look at this 16:9 thumbnail image. Based on its content and the user's recent request ("${lastMessage || 'None'}"), suggest 3 specific, highly effective "viral" edits to make it pop more. 
-    Examples if person present: "Add thick white outline to person", "Add glowing red eyes", "Blur the background more". 
-    Examples if scenery: "Add a huge meteor in the sky", "Make the ground look like lava". 
-    Return ONLY a JSON array of strings (max 6 words each).`;
+    prompt = `Look at this 16:9 thumbnail image. Based on its content and the user's recent request ("${lastMessage || 'None'}"), suggest 3 specific, highly effective "viral" edits to make it pop more. Return ONLY a JSON array of strings (max 6 words each).`;
   } else {
-    prompt = `The user wants to create a viral YouTube thumbnail. Suggest 3 high-level, trending concepts for a thumbnail (e.g., "Survival challenge in frozen forest", "Extreme tech desk setup setup"). Return ONLY a JSON array of strings.`;
+    prompt = `The user wants to create a viral YouTube thumbnail. Suggest 3 high-level, trending concepts for a thumbnail. Return ONLY a JSON array of strings.`;
   }
 
   parts.push({ text: prompt });
 
-  try {
-    const response = await ai.models.generateContent({
-      model: TEXT_MODEL_NAME,
-      contents: { parts },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING }
-        }
-      }
-    });
+  if (ai) {
+    try {
+      const response = await ai.models.generateContent({
+        model: TEXT_MODEL_NAME,
+        contents: { parts },
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+          },
+        },
+      });
 
-    const text = response.text || '[]';
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Failed to get suggestions:', error);
-    return base64Image 
-      ? ["Add cinematic glow", "Change to sunset background", "Intensify contrast"] 
-      : ["Gaming room setup", "Outdoor adventure", "Luxury car showcase"];
+      const text = response.text || '[]';
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Failed to get suggestions from AI:', error);
+    }
   }
+
+  // Fallback suggestions when AI is not available
+  return base64Image
+    ? [
+        'Add cinematic glow',
+        'Change to sunset background',
+        'Intensify contrast',
+      ]
+    : ['Gaming room setup', 'Outdoor adventure', 'Luxury car showcase'];
 }
